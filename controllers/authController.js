@@ -1,7 +1,7 @@
 const { body, validationResult } = require('express-validator');
-const validate = require('../utils/validator')
 const bcrypt = require('bcryptjs')
 const jwt  = require('jsonwebtoken')
+const validate = require('../utils/validator')
 const User = require('../models/User');
 
 exports.register = [
@@ -53,7 +53,7 @@ exports.login = [
             delete userData.password;
             delete userData.refresh_token;
 
-            const accessToken = generateAccessToken(userData)
+            const accessToken = jwt.sign(userData, process.env.JWT_TOKEN_SECRET, { expiresIn: '1h' })
             const refreshToken = jwt.sign(userData, process.env.JWT_REFRESH_TOKEN_SECRET)
 
             // Add to DB
@@ -76,16 +76,35 @@ exports.refreshToken = [
     ]),
     async (req, res) => {
         const refreshToken = req.body.token
+        const user = await User.findOne({ where: { refresh_token: refreshToken } });
+        if (!user) return res.status(403).json({message: 'Token forbidden'})
 
+        jwt.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET, (err, user) => {
+            if(err) return res.status(403).json({message: err.toString()})
+            
+            const newUser = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                created_at: user.created_at
+            }
+            const accessToken = jwt.sign(newUser, process.env.JWT_TOKEN_SECRET, { expiresIn: '1h' })
+            res.json({accessToken: accessToken})
+        })
     }
 ]
 
-exports.logout = [
-    validate([
-        body('token').notEmpty().withMessage('Token is required'),
-    ]),
-]
+exports.logout = async (req, res) => {
+    try {
+        const userId = req.user.id;
 
-function generateAccessToken(user) {
-    return jwt.sign(user, process.env.JWT_TOKEN_SECRET, { expiresIn: '1h' })
+        await User.update(
+            { refresh_token: null }, 
+            { where: { id: userId } }
+        );
+
+        res.status(200).json({ message: 'Logged out successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Logout failed' });
+    }
 }
