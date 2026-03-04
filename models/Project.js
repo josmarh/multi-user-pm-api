@@ -7,7 +7,7 @@ const Project = sequelize.define('Project', {
     name: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.STRING, allowNull: true },
     owner_id: { type: DataTypes.BIGINT, allowNull: false },
-    status: { type: DataTypes.STRING, allowNull: false }, // ongoing, draft, completed, pending
+    status: { type: DataTypes.STRING, allowNull: false }, // todo, in-progress, done, draft
 },{
     underscored: true, 
     timestamps: true,
@@ -17,16 +17,16 @@ const Project = sequelize.define('Project', {
     deletedAt: 'deleted_at',
     hooks: {
         afterCreate: async (project) => {
-            new ProjectMember({
+            await ProjectMember.create({
                 project_id: project.id,
                 user_id: project.owner_id,
-                role: 'owner'
+                role: 'admin'
             })
         }
     }
 });
 
-Project.belongsTo(User, { foreignKey: 'owner_id' });
-Project.hasMany(ProjectMember)
+Project.belongsTo(User, {as: 'owner', foreignKey: 'owner_id' });
+Project.hasMany(ProjectMember, {as: 'members', foreignKey: 'project_id'})
 
 module.exports = Project;

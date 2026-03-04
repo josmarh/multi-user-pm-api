@@ -16,10 +16,11 @@ const ProjectMember = sequelize.define('ProjectMember', {
     deletedAt: 'deleted_at', // Maps to column name
 });
 
+ProjectMember.belongsTo(User, { foreignKey: 'user_id', as: 'user'});
+
 // Define Relationship
 ProjectMember.associate = (models) => {
-    ProjectMember.belongsTo(models.User, { foreignKey: 'user_id' });
-    ProjectMember.belongsTo(models.Project, { foreignKey: 'project_id' });
+    ProjectMember.belongsTo(models.Project, { foreignKey: 'project_id'});
 };
 
 module.exports = ProjectMember;

@@ -13,7 +13,7 @@ const projectMembersRoutes = require('./routes/project-members')
 app.use('/api/auth', authRoutes)
 app.use('/api/projects', projectRoutes)
 app.use('/api/users', userRoutes)
-app.use('/api/project-members', projectMembersRoutes)
+app.use('/api/project', projectMembersRoutes)
 
 app.use((req, res, next) => {
     const error = new Error("Resource not found");

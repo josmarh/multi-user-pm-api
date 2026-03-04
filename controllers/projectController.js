@@ -1,14 +1,25 @@
 const { body } = require('express-validator');
 const validate = require('../utils/validator');
+
 const Project = require('../models/Project');
 const User = require('../models/User');
+const ProjectMember = require('../models/ProjectMember');
 
 exports.index = async (req, res) => {
     const userid = req.user.id
     const projects = await Project.findAll({ 
         where: { owner_id: userid }, 
         limit: 10,
-        include: { model: User, attributes: ['id', 'name', 'email', 'created_at'] },
+        include: [
+            { model: User, as: 'owner', attributes: ['id', 'name', 'email'] },
+            { model: ProjectMember, as: 'members', attributes: ['id', 'role'],
+                include: { 
+                    model: User, 
+                    as: 'user', 
+                    attributes: ['id', 'name', 'email'] 
+                }
+            }
+        ]
     });
 
     res.status(200).json({data: projects})
@@ -22,7 +33,7 @@ exports.store = [
     async (req, res) => {
         const {name, description} = req.body
         const userid = req.user.id
-        let status = req.body.status || 'draft'
+        let status = req.body?.status || 'draft'
 
         const project = await Project.create({ name, description, owner_id: userid, status: status });
 
@@ -36,7 +47,16 @@ exports.store = [
 exports.show = async (req, res) => {
     const project = await Project.findOne({ 
         where: { id: req.params.id }, 
-        include: { model: User, attributes: ['id', 'name', 'email', 'created_at'] },
+        include: [
+            { model: User, as: 'owner', attributes: ['id', 'name', 'email'] },
+            { model: ProjectMember, as: 'members', attributes: ['id', 'role'],
+                include: { 
+                    model: User, 
+                    as: 'user', 
+                    attributes: ['id', 'name', 'email'] 
+                }
+            }
+        ],
     });
     if (!project) return res.status(404).json({message: 'Project not available'})
 
