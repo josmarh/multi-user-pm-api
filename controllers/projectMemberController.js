@@ -56,5 +56,20 @@ exports.add_member = [
 ]
 
 exports.remove_member = async (req, res) => {
+    const projectId = req.params.projectId
+    const memberId = req.params.memberId
+
+    const pmember = await ProjectMember.findOne({ 
+        where: { project_id: projectId, user_id: memberId },
+    });
+    if (!pmember) return res.status(422).json({message: 'Member is not associated with this project'})
+    
     // check if the member is assigned any task to set it to unassigned
+    
+    pmember.destroy()
+
+    res.status(200).json({
+        message: 'Member removed succesfully!',
+        data: pmember
+    })
 }

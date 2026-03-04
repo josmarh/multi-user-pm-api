@@ -14,4 +14,6 @@ router.put('/update/:id', authenticateToken, ProjectController.update)
 
 router.delete('/delete/:id', authenticateToken, ProjectController.destroy)
 
+router.put('/:id/member/:memberId', authenticateToken, ProjectController.update_project_owner)
+
 module.exports = router

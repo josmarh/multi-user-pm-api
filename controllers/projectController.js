@@ -86,15 +86,58 @@ exports.update = [
 ]
 
 exports.destroy = async (req, res) => {
+    const projectId = req.params.id
+
     const project = await Project.findOne({ 
-        where: { id: req.params.id },
+        where: { id: projectId },
     });
     if (!project) return res.status(404).json({message: 'Project not found'})
-    
+
+    // enforce before user delete project must assign to a project member
+    if(parseInt(project.owner_id) === req.user.id) {
+        return res.status(422).json({error: {
+            message: 'Kindly assign project owner to another user before deleting'
+        }})
+    }
+
+    // delete cascade: project_members, tasks
+    ProjectMember.findAll({ where: { project_id: projectId } }).destroy()
+
     project.destroy()
 
     res.status(200).json({
         message: 'Project deleted succesfully!',
+        data: project
+    })
+}
+
+exports.update_project_owner = async (req, res) => {
+    const id = req.params.id
+    const memberId = req.params.memberId
+
+    const project = await Project.findOne({ 
+        where: { id: id, owner_id: req.user.id },
+    });
+    if (!project) return res.status(404).json({message: 'Project not found'})
+
+    project.update({ owner_id: memberId })
+
+    const promember = await ProjectMember.findOne({ where: { project_id: id, user_id: memberId } })
+    if(promember) {
+        promember.update({role: 'admin'})
+    }else {
+        const user = await User.findOne({ where: { id: memberId } });
+        if (!user) throw new Error('User is not registered');
+
+        await ProjectMember.create({
+            project_id: id,
+            user_id: memberId,
+            role: 'admin'
+        })
+    }
+
+    res.status(200).json({
+        message: 'Project owner updated succesfully',
         data: project
     })
 }
