@@ -1,15 +1,23 @@
 const { body } = require('express-validator');
 const validate = require('../utils/validator');
+const { getPagination, getPagingData } = require('../utils/pagination')
 
-const Project = require('../models/Project');
 const User = require('../models/User');
+const Project = require('../models/Project');
 const ProjectMember = require('../models/ProjectMember');
+const Task = require('../models/Task')
+const TaskAssignment = require('../models/TaskAssignment')
 
 exports.index = async (req, res) => {
+    const { page, per_page } = req.query;
+    const { limit, offset } = getPagination(page, per_page);
+
     const userid = req.user.id
-    const projects = await Project.findAll({ 
+    const projects = await Project.findAndCountAll({ 
         where: { owner_id: userid }, 
-        limit: 10,
+        limit,
+        offset,
+        order: [['id', 'DESC']],
         include: [
             { model: User, as: 'owner', attributes: ['id', 'name', 'email'] },
             { model: ProjectMember, as: 'members', attributes: ['id', 'role'],
@@ -22,7 +30,8 @@ exports.index = async (req, res) => {
         ]
     });
 
-    res.status(200).json({data: projects})
+    const response = getPagingData(projects, page, limit);
+    res.status(200).json({data: response})
 }
 
 exports.store = [
@@ -101,8 +110,13 @@ exports.destroy = async (req, res) => {
     }
 
     // delete cascade: project_members, tasks
-    ProjectMember.findAll({ where: { project_id: projectId } }).destroy()
+    await ProjectMember.findAll({ where: { project_id: projectId } }).destroy()
+    const tasks = await Task.findAll({ where: { project_id: projectId } })
 
+    for(let item of tasks){
+        await TaskAssignment.findAll({ where: { task_id: item.id } }).destroy()
+    }
+    tasks.destroy()
     project.destroy()
 
     res.status(200).json({

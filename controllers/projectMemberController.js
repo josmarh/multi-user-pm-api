@@ -7,7 +7,7 @@ const ProjectMember = require('../models/ProjectMember');
 exports.index = async (req, res) => {
     const projectId = req.params.id
 
-    const proMembers = ProjectMember.findAll({
+    const proMembers = await ProjectMember.findAll({
         where: { project_id: projectId }
     })
 
@@ -16,11 +16,7 @@ exports.index = async (req, res) => {
 
 exports.add_member = [
     validate([
-        body('role').notEmpty()
-            .custom(async (value) => {
-                if(!['admin','member'].includes(value)) 
-                    throw new Error('Invalid role used')
-            }),
+        body('role').notEmpty().isIn(['admin','member']),
         body('userId').notEmpty()
             .custom(async (value) => {
                 const checkMemberExist = await ProjectMember.findOne({ where: { user_id: value }})

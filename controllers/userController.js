@@ -1,14 +1,21 @@
 const { body } = require('express-validator');
 const validate = require('../utils/validator');
 const User = require('../models/User');
+const { getPagination, getPagingData } = require('../utils/pagination')
 
 exports.index = async (req, res) => {
-    const users = await User.findAll({ 
-        limit: 10, 
+    const { page, per_page } = req.query;
+    const { limit, offset } = getPagination(page, per_page);
+
+    const users = await User.findAndCountAll({ 
+        limit,
+        offset,
+        order: [['id', 'DESC']], 
         attributes: ['id', 'name', 'email', 'created_at']
     });
 
-    res.json({ data: users })
+    const response = getPagingData(users, page, limit);
+    res.json({ data: response })
 }
 
 exports.store = [
