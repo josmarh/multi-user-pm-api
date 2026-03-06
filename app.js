@@ -1,10 +1,53 @@
-const express = require('express')
+const express = require('express');
+const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
 const rfs = require('rotating-file-stream');
 const fs = require('fs');
 const path = require('path');
 
+const app = express()
+
+// Sets 15+ security headers automatically
+app.use(helmet({
+    // APIs usually don't serve HTML, so CSP is less critical here
+    contentSecurityPolicy: false, 
+    // Keeps these essential for all environments
+    strictTransportSecurity: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+    },
+    hidePoweredBy: true, 
+}));
+
+// Allowing External CDNs (Bootstrap/Google Fonts)
+// app.use(
+//     helmet({
+//         contentSecurityPolicy: {
+//             directives: {
+//                 ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+//                 "script-src": ["'self'", "cdn.jsdelivr.net"], // Allow Bootstrap JS
+//                 "style-src": ["'self'", "fonts.googleapis.com", "cdn.jsdelivr.net"], // Allow Fonts & Bootstrap CSS
+//                 "font-src": ["'self'", "fonts.gstatic.com"], // Allow Google Fonts
+//             },
+//         },
+//     })
+// );
+
+app.use(express.json())
+
+// Rate limiter setup
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per 'window'
+    message: {message: 'Too many requests attempts.'},
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use(limiter);
+
+// Logger setup
 const accessLogStream = rfs.createStream('access.log', {
     interval: '1d', // rotate daily
     size: '10M',    // or rotate when it reaches 10MB
@@ -12,11 +55,20 @@ const accessLogStream = rfs.createStream('access.log', {
     compress: 'gzip' // optional: compress older logs
 }, { flags: 'a' });
 
-const app = express()
-app.use(express.json())
-
 app.use(morgan('combined', { stream: accessLogStream }));
 app.use(morgan('dev'));
+
+// Prevent CORS error
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*')
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+
+    if(req.method === 'OPTION') {
+        res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, PUT, DELETE, GET')
+        return res.status(200).json({})
+    }
+    next();
+})
 
 // Routes
 app.use('/api/auth', require('./routes/auth'))
@@ -34,9 +86,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
     res.status(err.status || 500)
     res.json({
-        error: {
-            message: err.message
-        }
+        error: { message: err.message }
     })
 })
 
