@@ -18,8 +18,10 @@ exports.add_member = [
     validate([
         body('role').notEmpty().isIn(['admin','member']),
         body('userId').notEmpty()
-            .custom(async (value) => {
-                const checkMemberExist = await ProjectMember.findOne({ where: { user_id: value }})
+            .custom(async (value, { req }) => {
+                const checkMemberExist = await ProjectMember.findOne({ 
+                    where: { user_id: value, project_id: req.params.projectId }
+                })
                 if(checkMemberExist) throw new Error('User already added to project')
 
                 const user = await User.findOne({ where: { id: value } });

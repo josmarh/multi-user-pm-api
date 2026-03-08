@@ -1,6 +1,7 @@
 const { body } = require('express-validator');
 const validate = require('../utils/validator');
 const { getPagination, getPagingData } = require('../utils/pagination')
+const { Op } = require('sequelize');
 
 const User = require('../models/User');
 const Project = require('../models/Project');
@@ -100,7 +101,7 @@ exports.destroy = async (req, res) => {
     const project = await Project.findOne({ 
         where: { id: projectId },
     });
-    if (!project) return res.status(404).json({message: 'Project not found'})
+    if (!project) return res.status(404).json({message: 'Project resource not found'})
 
     // enforce before user delete project must assign to a project member
     if(parseInt(project.owner_id) === req.user.id) {
@@ -109,14 +110,18 @@ exports.destroy = async (req, res) => {
         }})
     }
 
-    // delete cascade: project_members, tasks
-    await ProjectMember.findAll({ where: { project_id: projectId } }).destroy()
+    // delete FK related: project_members, tasks, task_assignments
+    await ProjectMember.destroy({ where: { project_id: projectId } })
+
     const tasks = await Task.findAll({ where: { project_id: projectId } })
 
-    for(let item of tasks){
-        await TaskAssignment.findAll({ where: { task_id: item.id } }).destroy()
+    if(tasks && tasks.length) {
+        const taskIds = tasks.map(task => task.id);
+
+        await TaskAssignment.destroy({ where: { task_id: {[Op.in]: taskIds }}})
+
+        await Task.destroy({ where: { id: {[Op.in]: taskIds} }})
     }
-    tasks.destroy()
     project.destroy()
 
     res.status(200).json({
