@@ -5,7 +5,7 @@ const User = require('../models/User');
 const ProjectMember = require('../models/ProjectMember');
 
 exports.index = async (req, res) => {
-    const projectId = req.params.id
+    const projectId = req.params.projectId
 
     const proMembers = await ProjectMember.findAll({
         where: { project_id: projectId }

@@ -4,12 +4,12 @@ const TaskController = require('../controllers/taskController')
 
 const router = express.Router()
 
-router.get('/', authenticateToken, TaskController.index)
-router.post('/store', authenticateToken, TaskController.store)
-router.get('/show/:id', authenticateToken, TaskController.show)
-router.put('/update/:id', authenticateToken, TaskController.update)
-router.delete('/delete/:id', authenticateToken, TaskController.destroy)
-router.post('/assign/:taskId', authenticateToken, TaskController.assign_task)
-router.post('/unassign/:taskId', authenticateToken, TaskController.unassign_task)
+router.get('/:pId', authenticateToken, TaskController.index)
+router.post('/:pId/store', authenticateToken, TaskController.store)
+router.get('/:pId/show/:id', authenticateToken, TaskController.show)
+router.put('/:pId/update/:id', authenticateToken, TaskController.update)
+router.delete('/:pId/delete/:id', authenticateToken, TaskController.destroy)
+router.post('/:pId/assign/:taskId', authenticateToken, TaskController.assign_task)
+router.post('/:pId/unassign/:taskId', authenticateToken, TaskController.unassign_task)
 
 module.exports = router

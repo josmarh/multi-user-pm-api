@@ -4,7 +4,7 @@ const authenticateToken = require('../middlewares/authenticateToken')
 
 const router = express.Router()
 
-router.post('/members', authenticateToken, ProjectMemberController.index)
+router.get('/:projectId/members', authenticateToken, ProjectMemberController.index)
 
 router.post('/:projectId/member', authenticateToken, ProjectMemberController.add_member)
 

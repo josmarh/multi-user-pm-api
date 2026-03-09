@@ -14,10 +14,10 @@ exports.index = async (req, res) => {
     const { limit, offset } = getPagination(page, per_page);
 
     const queryTitle = req.query.title
-    let whereClause = {created_by: req.user.id}
+    let whereClause = {project_id: req.params.pId}
 
     if(queryTitle) {
-        whereClause['title'] = { [Op.iLike]: `%${queryTitle}%` }
+        whereClause['title'] = {[Op.iLike]: `%${queryTitle}%`}
     }
 
     const tasks = await Task.findAndCountAll({
@@ -77,7 +77,6 @@ exports.update = [
         body('description').notEmpty().isLength({ min: 6 }),
         body('status').notEmpty().isIn(['todo','in-progress','done']).withMessage('Invalid value for status'),
         body('priority').notEmpty().isString(),
-        body('due_date').notEmpty().isDate()
     ]),
     async (req, res) => {
         const task = await Task.findOne({
